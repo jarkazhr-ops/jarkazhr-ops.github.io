@@ -572,11 +572,7 @@
           </h3>
           <div class="grid grid-cols-2 gap-2.5">
             <input type="month" id="tim-bulan" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-semibold focus:ring-4 focus:ring-brand-500/10 focus:border-brand-600 outline-none">
-            <select id="tim-group" onchange="onTimGroupChange()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-semibold focus:ring-4 focus:ring-brand-500/10 focus:border-brand-600 outline-none">
-              <option value="karyawan" selected>Group: Karyawan</option>
-              <option value="hr">Group: HR / Atasan</option>
-            </select>
-            <select id="tim-karyawan" class="col-span-2 w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-semibold focus:ring-4 focus:ring-brand-500/10 focus:border-brand-600 outline-none">
+            <select id="tim-karyawan" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-semibold focus:ring-4 focus:ring-brand-500/10 focus:border-brand-600 outline-none">
               <option value="">Semua Karyawan</option>
             </select>
           </div>
@@ -822,6 +818,7 @@
 
     function applyLoggedInUser(user) {
       $('tab-tim-btn').classList.toggle('hidden', !user.isManager);
+      $('tab-tugas-btn').classList.toggle('hidden', user.wajibTugas === false);
       $('top-user-name').innerText = user.nama || 'Karyawan';
       $('top-user-email').innerText = user.email;
       $('display-sisa-cuti').innerText = `${user.sisaCuti} hari`;
@@ -881,6 +878,7 @@
           ? "flex-1 py-2 rounded-2xl flex flex-col items-center gap-0.5 text-brand-600 bg-brand-50/80 transition-all font-bold shadow-sm"
           : "flex-1 py-2 rounded-2xl flex flex-col items-center gap-0.5 text-slate-400 hover:text-slate-600 transition-all font-semibold";
         if (t === 'tim' && !(currentUser && currentUser.isManager)) btn.classList.add('hidden');
+        if (t === 'tugas' && currentUser && currentUser.wajibTugas === false) btn.classList.add('hidden');
       });
 
       hideAlert();
@@ -1545,22 +1543,14 @@
       if (!timLoaded) { loadTimReport(); loadTimTasks(); }
     }
 
-    // Ganti group (Karyawan / HR): reset pilihan karyawan lalu muat ulang
-    function onTimGroupChange() {
-      $('tim-karyawan').value = '';
-      loadTimReport();
-      loadTimTasks();
-    }
-
     function loadTimReport() {
       const bulan = $('tim-bulan').value;
       const filter = $('tim-karyawan').value;
-      const group = $('tim-group').value;
       const btn = $('btn-tim-load');
       btn.disabled = true;
       $('tim-summary').innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Memuat laporan...</p>';
 
-      callServer('getManagerReport', [sessionToken, bulan, filter, group], function (res) {
+      callServer('getManagerReport', [sessionToken, bulan, filter], function (res) {
         btn.disabled = false;
         timLoaded = true;
 
@@ -1582,7 +1572,7 @@
     function renderTimSummary(list) {
       const box = $('tim-summary');
       if (!list || list.length === 0) {
-        box.innerHTML = '<p class="text-xs text-slate-400 text-center py-4 bg-white/70 rounded-2xl">Tidak ada data pada group ini.</p>';
+        box.innerHTML = '<p class="text-xs text-slate-400 text-center py-4 bg-white/70 rounded-2xl">Tidak ada karyawan di tim Anda.</p>';
         return;
       }
       const stat = (label, val, color) => `
@@ -1672,10 +1662,9 @@
     function loadTimTasks() {
       const tanggal = $('tim-tanggal').value;
       const filter = $('tim-karyawan').value;
-      const group = $('tim-group').value;
       $('tim-tasks').innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Memuat tugas...</p>';
 
-      callServer('getManagerTasks', [sessionToken, tanggal, filter, group], function (res) {
+      callServer('getManagerTasks', [sessionToken, tanggal, filter], function (res) {
         const box = $('tim-tasks');
         if (!res.tasks.length) {
           box.innerHTML = '<p class="text-xs text-slate-400 text-center py-4 bg-white/70 rounded-2xl">Tidak ada tugas dicatat pada tanggal ini.</p>';
